@@ -6,20 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.device.ScanManager
-import android.device.scanner.configuration.Constants
 import android.device.scanner.configuration.PropertyID
 import android.device.scanner.configuration.Symbology
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Bundle
 import android.os.Handler
 import android.os.Message
 import android.preference.CheckBoxPreference
 import android.preference.EditTextPreference
 import android.preference.ListPreference
-import android.preference.Preference
-import android.preference.PreferenceFragment
-import android.preference.PreferenceScreen
 import android.util.Log
 import android.widget.Toast
 import io.flutter.embedding.android.FlutterActivity
@@ -187,7 +182,7 @@ barcodeStr:$barcodeStr"""
             registerReceiver(mReceiver, filter)
         } else if (mScanManager != null) {
             stopDecode()
-            // mScanManager!!.stopDecode()
+            mScanManager!!.stopDecode()
             unregisterReceiver(mReceiver)
         }
     }
@@ -202,73 +197,219 @@ barcodeStr:$barcodeStr"""
     }
 
     /**
-     * SettingsBarcodeList helper
-     */
-    class SettingsBarcodeList : PreferenceFragment(), Preference.OnPreferenceChangeListener {
-        private var root: PreferenceScreen? = null
-        private var mBarcode: Preference? = null
-        private var mScanDemo: MainActivity? = null
-        override fun onCreate(savedInstanceState: Bundle?) {
-            super.onCreate(savedInstanceState)
-            root = this.preferenceScreen
-            if (root != null) {
-                root!!.removeAll()
-            }
-            Log.d(TAG, "onCreate , ,root:$root") //Symbology s = BARCODE_SUPPORT_SYMBOLOGY[9];
-            initSymbology()
-        }
-
-        /**
-         * Use Symbology enumeration
-         */
-        private fun initSymbology() {
-            if (mScanDemo != null) {
-                val length = BARCODE_SUPPORT_SYMBOLOGY.size
-                Log.d(TAG, "initSymbology  length : $length")
-                for (i in 0 until length) {
-                    if (mScanDemo != null && mScanDemo!!.isSymbologySupported(BARCODE_SUPPORT_SYMBOLOGY[i])) {
-                        mBarcode = Preference(mScanDemo)
-                        mBarcode!!.title = BARCODE_SUPPORT_SYMBOLOGY[i].toString() + ""
-                        mBarcode!!.key = BARCODE_SUPPORT_SYMBOLOGY[i].toString() + ""
-                        this.preferenceScreen.addPreference(mBarcode)
-                    } else {
-                        Log.d(TAG, "initSymbology , Not Support Barcode " + BARCODE_SUPPORT_SYMBOLOGY[i])
-                    }
-                }
-            }
-        }
-
-        fun setScanManagerDemo(demo: MainActivity?) {
-            mScanDemo = demo
-        }
-
-        override fun onPreferenceTreeClick(preferenceScreen: PreferenceScreen, preference: Preference): Boolean {
-            Log.d(TAG, "onPreferenceTreeClick preference:$preference")
-            val key = preference.key
-            if (key != null) {
-                mScanDemo!!.updateScanSettingsBarcode(key)
-            }
-            return super.onPreferenceTreeClick(preferenceScreen, preference)
-        }
-
-        override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean {
-            return false
-        }
-    }
-
-    private fun isSymbologySupported(symbology: Symbology): Boolean {
-        var isSupport = false
-        if (mScanManager != null) {
-            isSupport = mScanManager!!.isSymbologySupported(symbology)
-        }
-        return isSupport
-    }
-
-    /**
      * mBarcodeMap helper
      */
     private fun initBarcodeParameters() {
-        //params
+        mBarcodeMap.clear()
+        var holder = BarcodeHolder()
+        // Symbology.AZTEC
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.AZTEC_ENABLE)
+        holder.mParaKeys = arrayOf("AZTEC_ENABLE")
+        mBarcodeMap[Symbology.AZTEC.toString() + ""] = holder
+        // Symbology.CHINESE25
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.C25_ENABLE)
+        holder.mParaKeys = arrayOf("C25_ENABLE")
+        mBarcodeMap[Symbology.CHINESE25.toString() + ""] = holder
+        // Symbology.CODABAR
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeNOTIS = CheckBoxPreference(this)
+        holder.mBarcodeCLSI = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODABAR_ENABLE, PropertyID.CODABAR_LENGTH1, PropertyID.CODABAR_LENGTH2, PropertyID.CODABAR_NOTIS, PropertyID.CODABAR_CLSI)
+        holder.mParaKeys = arrayOf("CODABAR_ENABLE", "CODABAR_LENGTH1", "CODABAR_LENGTH2", "CODABAR_NOTIS", "CODABAR_CLSI")
+        mBarcodeMap[Symbology.CODABAR.toString() + ""] = holder
+        // Symbology.CODE11
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeCheckDigit = ListPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE11_ENABLE, PropertyID.CODE11_LENGTH1, PropertyID.CODE11_LENGTH2, PropertyID.CODE11_SEND_CHECK)
+        holder.mParaKeys = arrayOf("CODE11_ENABLE", "CODE11_LENGTH1", "CODE11_LENGTH2", "CODE11_SEND_CHECK")
+        mBarcodeMap[Symbology.CODE11.toString() + ""] = holder
+        // Symbology.CODE32
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE32_ENABLE)
+        holder.mParaKeys = arrayOf("CODE32_ENABLE")
+        mBarcodeMap[Symbology.CODE32.toString() + ""] = holder
+        // Symbology.CODE39
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeChecksum = CheckBoxPreference(this)
+        holder.mBarcodeSendCheck = CheckBoxPreference(this)
+        holder.mBarcodeFullASCII = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE39_ENABLE, PropertyID.CODE39_LENGTH1, PropertyID.CODE39_LENGTH2, PropertyID.CODE39_ENABLE_CHECK, PropertyID.CODE39_SEND_CHECK, PropertyID.CODE39_FULL_ASCII)
+        holder.mParaKeys = arrayOf("CODE39_ENABLE", "CODE39_LENGTH1", "CODE39_LENGTH2", "CODE39_ENABLE_CHECK", "CODE39_SEND_CHECK", "CODE39_FULL_ASCII")
+        mBarcodeMap[Symbology.CODE39.toString() + ""] = holder
+        // Symbology.CODE93
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE93_ENABLE, PropertyID.CODE93_LENGTH1, PropertyID.CODE93_LENGTH2)
+        holder.mParaKeys = arrayOf("CODE93_ENABLE", "CODE93_LENGTH1", "CODE93_LENGTH2")
+        mBarcodeMap[Symbology.CODE93.toString() + ""] = holder
+        // Symbology.CODE128
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeISBT = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE128_ENABLE, PropertyID.CODE128_LENGTH1, PropertyID.CODE128_LENGTH2, PropertyID.CODE128_CHECK_ISBT_TABLE)
+        holder.mParaKeys = arrayOf("CODE128_ENABLE", "CODE128_LENGTH1", "CODE128_LENGTH2", "CODE128_CHECK_ISBT_TABLE")
+        mBarcodeMap[Symbology.CODE128.toString() + ""] = holder
+        // Symbology.COMPOSITE_CC_AB
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.COMPOSITE_CC_AB_ENABLE)
+        holder.mParaKeys = arrayOf("COMPOSITE_CC_AB_ENABLE")
+        mBarcodeMap[Symbology.COMPOSITE_CC_AB.toString() + ""] = holder
+        // Symbology.COMPOSITE_CC_C
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.COMPOSITE_CC_C_ENABLE)
+        holder.mParaKeys = arrayOf("COMPOSITE_CC_C_ENABLE")
+        mBarcodeMap[Symbology.COMPOSITE_CC_C.toString() + ""] = holder
+        // Symbology.DATAMATRIX
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.DATAMATRIX_ENABLE)
+        holder.mParaKeys = arrayOf("DATAMATRIX_ENABLE")
+        mBarcodeMap[Symbology.DATAMATRIX.toString() + ""] = holder
+        // Symbology.DISCRETE25
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.D25_ENABLE)
+        holder.mParaKeys = arrayOf("D25_ENABLE")
+        mBarcodeMap[Symbology.DISCRETE25.toString() + ""] = holder
+        // Symbology.EAN8
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.EAN8_ENABLE)
+        holder.mParaKeys = arrayOf("EAN8_ENABLE")
+        mBarcodeMap[Symbology.EAN8.toString() + ""] = holder
+        // Symbology.EAN13
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeBookland = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.EAN13_ENABLE, PropertyID.EAN13_BOOKLANDEAN)
+        holder.mParaKeys = arrayOf("EAN13_ENABLE", "EAN13_BOOKLANDEAN")
+        mBarcodeMap[Symbology.EAN13.toString() + ""] = holder
+        // Symbology.GS1_14
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.GS1_14_ENABLE)
+        holder.mParaKeys = arrayOf("GS1_14_ENABLE")
+        mBarcodeMap[Symbology.GS1_14.toString() + ""] = holder
+        // Symbology.GS1_128
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.CODE128_GS1_ENABLE)
+        holder.mParaKeys = arrayOf("CODE128_GS1_ENABLE")
+        mBarcodeMap[Symbology.GS1_128.toString() + ""] = holder
+        // Symbology.GS1_EXP
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.GS1_EXP_ENABLE, PropertyID.GS1_EXP_LENGTH1, PropertyID.GS1_EXP_LENGTH2)
+        holder.mParaKeys = arrayOf("GS1_EXP_ENABLE", "GS1_EXP_LENGTH1", "GS1_EXP_LENGTH2")
+        mBarcodeMap[Symbology.GS1_EXP.toString() + ""] = holder
+        // Symbology.GS1_LIMIT
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.GS1_LIMIT_ENABLE)
+        holder.mParaKeys = arrayOf("GS1_LIMIT_ENABLE")
+        mBarcodeMap[Symbology.GS1_LIMIT.toString() + ""] = holder
+        // Symbology.INTERLEAVED25
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeChecksum = CheckBoxPreference(this)
+        holder.mBarcodeSendCheck = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.I25_ENABLE, PropertyID.I25_LENGTH1, PropertyID.I25_LENGTH2, PropertyID.I25_ENABLE_CHECK, PropertyID.I25_SEND_CHECK)
+        holder.mParaKeys = arrayOf("I25_ENABLE", "I25_LENGTH1", "I25_LENGTH2", "I25_ENABLE_CHECK", "I25_SEND_CHECK")
+        mBarcodeMap[Symbology.INTERLEAVED25.toString() + ""] = holder
+        // Symbology.MATRIX25
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.M25_ENABLE)
+        holder.mParaKeys = arrayOf("M25_ENABLE")
+        mBarcodeMap[Symbology.MATRIX25.toString() + ""] = holder
+        // Symbology.MAXICODE
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.MAXICODE_ENABLE)
+        holder.mParaKeys = arrayOf("MAXICODE_ENABLE")
+        mBarcodeMap[Symbology.MAXICODE.toString() + ""] = holder
+        // Symbology.MICROPDF417
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.MICROPDF417_ENABLE)
+        holder.mParaKeys = arrayOf("MICROPDF417_ENABLE")
+        mBarcodeMap[Symbology.MICROPDF417.toString() + ""] = holder
+        // Symbology.MSI
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeLength1 = EditTextPreference(this)
+        holder.mBarcodeLength2 = EditTextPreference(this)
+        holder.mBarcodeSecondChecksum = CheckBoxPreference(this)
+        holder.mBarcodeSendCheck = CheckBoxPreference(this)
+        holder.mBarcodeSecondChecksumMode = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.MSI_ENABLE, PropertyID.MSI_LENGTH1, PropertyID.MSI_LENGTH2, PropertyID.MSI_REQUIRE_2_CHECK, PropertyID.MSI_SEND_CHECK, PropertyID.MSI_CHECK_2_MOD_11)
+        holder.mParaKeys = arrayOf("MSI_ENABLE", "MSI_LENGTH1", "MSI_LENGTH2", "MSI_REQUIRE_2_CHECK", "MSI_SEND_CHECK", "MSI_CHECK_2_MOD_11")
+        mBarcodeMap[Symbology.MSI.toString() + ""] = holder
+        // Symbology.PDF417
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.PDF417_ENABLE)
+        holder.mParaKeys = arrayOf("PDF417_ENABLE")
+        mBarcodeMap[Symbology.PDF417.toString() + ""] = holder
+        // Symbology.QRCODE
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.QRCODE_ENABLE)
+        holder.mParaKeys = arrayOf("QRCODE_ENABLE")
+        mBarcodeMap[Symbology.QRCODE.toString() + ""] = holder
+        // Symbology.TRIOPTIC
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.TRIOPTIC_ENABLE)
+        holder.mParaKeys = arrayOf("TRIOPTIC_ENABLE")
+        mBarcodeMap[Symbology.TRIOPTIC.toString() + ""] = holder
+        // Symbology.UPCA
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeChecksum = CheckBoxPreference(this)
+        holder.mBarcodeSystemDigit = CheckBoxPreference(this)
+        holder.mBarcodeConvertEAN13 = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.UPCA_ENABLE, PropertyID.UPCA_SEND_CHECK, PropertyID.UPCA_SEND_SYS, PropertyID.UPCA_TO_EAN13)
+        holder.mParaKeys = arrayOf("UPCA_ENABLE", "UPCA_SEND_CHECK", "UPCA_SEND_SYS", "UPCA_TO_EAN13")
+        mBarcodeMap[Symbology.UPCA.toString() + ""] = holder
+        // Symbology.UPCE
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mBarcodeChecksum = CheckBoxPreference(this)
+        holder.mBarcodeSystemDigit = CheckBoxPreference(this)
+        holder.mBarcodeConvertUPCA = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.UPCE_ENABLE, PropertyID.UPCE_SEND_CHECK, PropertyID.UPCE_SEND_SYS, PropertyID.UPCE_TO_UPCA)
+        holder.mParaKeys = arrayOf("UPCE_ENABLE", "UPCE_SEND_CHECK", "UPCE_SEND_SYS", "UPCE_TO_UPCA")
+        mBarcodeMap[Symbology.UPCE.toString() + ""] = holder
+        // Symbology.UPCE1
+        holder = BarcodeHolder()
+        holder.mBarcodeEnable = CheckBoxPreference(this)
+        holder.mParaIds = intArrayOf(PropertyID.UPCE1_ENABLE)
+        holder.mParaKeys = arrayOf("UPCE1_ENABLE")
+        mBarcodeMap[Symbology.UPCE1.toString() + ""] = holder
     }
 
     /**
@@ -297,12 +438,7 @@ barcodeStr:$barcodeStr"""
         var mParaIds: IntArray? = null
         var mParaKeys: Array<String>? = null
     }
-    /**
-     * Use of android.device.scanner.configuration.Constants.Symbology Class
-     */
-    private val BARCODE_SYMBOLOGY = intArrayOf(
-        Constants.Symbology.AZTEC, Constants.Symbology.CHINESE25, Constants.Symbology.CODABAR, Constants.Symbology.CODE11, Constants.Symbology.CODE32, Constants.Symbology.CODE39, Constants.Symbology.CODE93, Constants.Symbology.CODE128, Constants.Symbology.COMPOSITE_CC_AB, Constants.Symbology.COMPOSITE_CC_C, Constants.Symbology.COMPOSITE_TLC39, Constants.Symbology.DATAMATRIX, Constants.Symbology.DISCRETE25, Constants.Symbology.EAN8, Constants.Symbology.EAN13, Constants.Symbology.GS1_14, Constants.Symbology.GS1_128, Constants.Symbology.GS1_EXP, Constants.Symbology.GS1_LIMIT, Constants.Symbology.HANXIN, Constants.Symbology.INTERLEAVED25, Constants.Symbology.MATRIX25, Constants.Symbology.MAXICODE, Constants.Symbology.MICROPDF417, Constants.Symbology.MSI, Constants.Symbology.PDF417, Constants.Symbology.POSTAL_4STATE, Constants.Symbology.POSTAL_AUSTRALIAN, Constants.Symbology.POSTAL_JAPAN, Constants.Symbology.POSTAL_KIX, Constants.Symbology.POSTAL_PLANET, Constants.Symbology.POSTAL_POSTNET, Constants.Symbology.POSTAL_ROYALMAIL, Constants.Symbology.POSTAL_UPUFICS, Constants.Symbology.QRCODE, Constants.Symbology.TRIOPTIC, Constants.Symbology.UPCA, Constants.Symbology.UPCE, Constants.Symbology.UPCE1, Constants.Symbology.NONE, Constants.Symbology.RESERVED_6, Constants.Symbology.RESERVED_13, Constants.Symbology.RESERVED_15, Constants.Symbology.RESERVED_16, Constants.Symbology.RESERVED_20, Constants.Symbology.RESERVED_21, Constants.Symbology.RESERVED_27, Constants.Symbology.RESERVED_28, Constants.Symbology.RESERVED_30, Constants.Symbology.RESERVED_33
-    )
+
     companion object {
         private const val TAG = "ScanManagerDemo"
         private const val DEBUG = true
