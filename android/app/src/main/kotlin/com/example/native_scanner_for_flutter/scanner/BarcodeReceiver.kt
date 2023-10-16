@@ -1,86 +1,28 @@
-package com.mortezaqn.samplescannerurovo.scanner
+package com.example.native_scanner_for_flutter.scanner
 
 import android.annotation.SuppressLint
 import android.content.*
 import android.device.ScanManager
 import android.device.scanner.configuration.PropertyID
 import android.device.scanner.configuration.Symbology
+import android.util.Log
 import androidx.lifecycle.*
-import timber.log.Timber
 
 class BarcodeReceiver(
     private val context: Context,
     lifecycle: Lifecycle,
     private val callback: (String?) -> Unit,
-) : DefaultLifecycleObserver {
+) : DefaultLifecycleObserver, MReceiver.ISocketMessageReceiver {
 
     private val _filter = IntentFilter()
     private val _scanManager: ScanManager = ScanManager()
+    private var receiver = MReceiver()
+    private var iSocketMessageReceiver: MReceiver.ISocketMessageReceiver? = null
+
 
     init {
         lifecycle.addObserver(this)
-    }
 
-    private val receiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, nullAbleIntent: Intent?) {
-            nullAbleIntent?.let { intent ->
-                with(intent) {
-                    // Get scan results, including string and byte data etc.
-                    // val barcode = getByteArrayExtra(ScanManager.DECODE_DATA_TAG)
-                    // val barcodeLen = getIntExtra(ScanManager.BARCODE_LENGTH_TAG, 0)
-                    // val barcodeType = getByteExtra(ScanManager.BARCODE_TYPE_TAG, 0.toByte())
-                    val barcodeStr = getStringExtra(ScanManager.BARCODE_STRING_TAG)
-
-                    // if (barcode != null && barcode.isNotEmpty()) {
-                    // val scanResult = String(barcode, 0, barcodeLen)
-                    // log
-                    // printDataScan(action, barcode, barcodeLen, scanResult, barcodeStr, barcodeType)
-                    // }
-
-                    // Result
-                    //                    loggerBarcodeReceiver(barcodeStr)
-                    callback.invoke(barcodeStr)
-
-                    if (intent.hasExtra(SYMBOLOGY_NAME_TAG)) {
-                        val symName = intent.getStringExtra(SYMBOLOGY_NAME_TAG)
-                        Timber.v(">>> SYMBOLOGY_NAME_TAG - symName = $symName")
-                    }
-                    if (intent.hasExtra(SYMBOLOGY_ID_TAG)) {
-                        val symId = intent.getIntExtra(SYMBOLOGY_ID_TAG, Symbology.NONE.toInt())
-                        Timber.v(">>> SYMBOLOGY_ID_TAG - symId = $symId")
-                    } else {
-                        val type = intent.getByteExtra(ScanManager.BARCODE_TYPE_TAG, 0.toByte())
-                        val symId: Int = OEMSymbologyId.getHSMSymbologyId(type.toInt())
-                        Timber.v(">>> BARCODE_TYPE_TAG - symId = $symId")
-                    }
-                    if (intent.hasExtra(DECODE_TIME_TAG)) {
-                        val time = intent.getLongExtra(DECODE_TIME_TAG, 0L)
-                        Timber.v(">>> DECODE_TIME_TAG - time = $time")
-                    }
-
-                    try {
-                        val resultBundle = intent.extras
-                        val keys = resultBundle!!.keySet()
-                        for (key in keys) {
-                            val obj = resultBundle[key]
-                            if (obj is String) {
-                                Timber.v(">>> key: $key value: $obj")
-                            } else if (obj is Array<*> && obj.isArrayOf<String>()) {
-                                for (code in obj) {
-                                    Timber.v(">>> key: $key value: $code")
-                                }
-                            } else if (obj is ByteArray) {
-                                Timber.v(">>> key: $key - value: $obj")
-                            } else {
-                                Timber.v(">>> key: $key object: $obj")
-                            }
-                        }
-                    } catch (e: Exception) {
-                        Timber.e(">>> Exception -> $e")
-                    }
-                }
-            }
-        }
     }
 
     override fun onResume(owner: LifecycleOwner) {
@@ -95,10 +37,12 @@ class BarcodeReceiver(
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerBarcodeReceiver() {
-        Timber.v("++ register BarcodeReceiver")
         context.initBarcodeParams(Symbology.DATAMATRIX)
 
         _scanManager.openScanner()
+
+        iSocketMessageReceiver = this;
+        receiver.registerCallback(iSocketMessageReceiver);
 
         val bufferValues: Array<String> = _scanManager.getParameterString(bufferID)
         actionBufferValue = _scanManager.getParameterString(bufferID)
@@ -108,11 +52,10 @@ class BarcodeReceiver(
         } else {
             _filter.addAction(ScanManager.ACTION_DECODE)
         }
-        context.registerReceiver(receiver, _filter)
+        var result = context.registerReceiver(receiver, _filter)
     }
 
-    private fun unregisterBarcodeReceiver() {
-        Timber.v("-- unregister BarcodeReceiver")
+    fun unregisterBarcodeReceiver() {
         _scanManager.stopDecode()
         context.unregisterReceiver(receiver)
     }
@@ -181,5 +124,25 @@ class BarcodeReceiver(
             }
             return stringBuilder.toString()
         }
+    }
+
+    override fun sendSocketMessage(socketMessage: String?) {
+        callback(socketMessage)
+    }
+
+    fun startDecode() {
+        _scanManager.startDecode()
+    }
+
+    fun getScannerState():Boolean{
+        return try{
+            _scanManager.scannerState
+        }catch (e:Exception) {
+            false
+        }
+
+    }
+    fun stopDecode(){
+        _scanManager.stopDecode()
     }
 }

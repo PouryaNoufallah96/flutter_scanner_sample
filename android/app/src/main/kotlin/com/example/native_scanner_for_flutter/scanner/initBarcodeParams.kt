@@ -1,4 +1,4 @@
-package com.mortezaqn.samplescannerurovo.scanner
+package com.example.native_scanner_for_flutter.scanner
 
 import android.content.Context
 import android.device.scanner.configuration.PropertyID
