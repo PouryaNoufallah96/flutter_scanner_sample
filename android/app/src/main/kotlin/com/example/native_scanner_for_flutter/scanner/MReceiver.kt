@@ -22,21 +22,8 @@ class MReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, nullAbleIntent: Intent?) {
         nullAbleIntent?.let { intent ->
             with(intent) {
-                // Get scan results, including string and byte data etc.
-                // val barcode = getByteArrayExtra(ScanManager.DECODE_DATA_TAG)
-                // val barcodeLen = getIntExtra(ScanManager.BARCODE_LENGTH_TAG, 0)
-                // val barcodeType = getByteExtra(ScanManager.BARCODE_TYPE_TAG, 0.toByte())
                 val barcodeStr = getStringExtra(ScanManager.BARCODE_STRING_TAG)
                 iSocketMessageReceiver!!.sendSocketMessage(barcodeStr)
-                // if (barcode != null && barcode.isNotEmpty()) {
-                // val scanResult = String(barcode, 0, barcodeLen)
-                // log
-                // printDataScan(action, barcode, barcodeLen, scanResult, barcodeStr, barcodeType)
-                // }
-
-                // Result
-                //                    loggerBarcodeReceiver(barcodeStr)
-//                callback.invoke(barcodeStr)
 
                 if (intent.hasExtra(BarcodeReceiver.SYMBOLOGY_NAME_TAG)) {
                     val symName = intent.getStringExtra(BarcodeReceiver.SYMBOLOGY_NAME_TAG)

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_barcode_listener/flutter_barcode_listener.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,45 +35,53 @@ class _MyHomePageState extends State<MyHomePage> {
   static const _platform =
       MethodChannel("com.example.native_scanner_for_flutter/scanner");
   static const _channel = EventChannel('ScannerChannel');
-  final _duation = const Duration(milliseconds: 1000);
-  var _lastMili = 0;
 
-  start() async {
-    _platform.invokeMethod('startScan');
-  }
-
-  _close() async {
-    _platform.invokeMethod('stopScan');
-  }
+  StreamSubscription? _scannerSubscription;
+  var _barcode = '';
+  var _lastScanTime = DateTime.now();
+  final _throttleDuration = const Duration(milliseconds: 500);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPersistentFrameCallback((timeStamp) {
-      _init();
-    });
+    _init();
   }
 
-  _init() async {
-    final result = (await _platform.invokeMethod('getScannerState')) as bool;
-    print('Is support: $result');
-    _platform.invokeMethod('initScanner');
-    _channel
+  void _init() async {
+    final result = (await _platform.invokeMethod('initScanner')) as bool;
+    if (!result) return;
+
+    _scannerSubscription = _channel
         .receiveBroadcastStream()
         .map((event) => event.toString())
         .listen((event) {
-      setState(() {
-        _barcode = event;
-      });
+      final currentTime = DateTime.now();
+      if (currentTime.difference(_lastScanTime) > _throttleDuration) {
+        _lastScanTime = currentTime;
+        setState(() {
+          _barcode = event;
+        });
+      }
     });
   }
 
-  var _barcode = '';
-
   @override
   void dispose() {
-    _platform.invokeMethod('closeScanner');
+    _scannerSubscription?.cancel();
+    _closeScanner();
     super.dispose();
+  }
+
+  _closeScanner() async {
+    _platform.invokeMethod('closeScanner');
+  }
+
+  _start() async {
+    _platform.invokeMethod('startScan');
+  }
+
+  _stop() async {
+    _platform.invokeMethod('stopScan');
   }
 
   @override
@@ -93,10 +100,10 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             GestureDetector(
               onTapDown: (details) {
-                start();
+                _start();
               },
               onTapUp: (details) {
-                _close();
+                _stop();
               },
               child: Container(
                 width: 100,

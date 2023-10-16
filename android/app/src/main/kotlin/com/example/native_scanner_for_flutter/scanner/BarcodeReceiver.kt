@@ -105,10 +105,6 @@ class BarcodeReceiver(
         )
         var idMode: IntArray = intArrayOf()
 
-        //        mScanManager.openScanner();
-        //        actionValueBuf = mScanManager.getParameterString(idBuf);
-        //        idMode = mScanManager.getParameterInts(idModeBuf);
-
         fun bytesToHexString(src: ByteArray?): String? {
             val stringBuilder = StringBuilder("")
             if (src == null || src.isEmpty()) {
